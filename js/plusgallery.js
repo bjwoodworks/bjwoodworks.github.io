@@ -50,7 +50,7 @@ SLIDEFADE
     var pg = {
       /*user defined Defaults*/
       imagePath: 'images/plusgallery',
-      type: 'google',
+      type: null,
       albumTitle: false, //show the album title in single album mode
       albumLimit: 16, //Limit amout of albums to load initially.
       limit: 30, //Limit of photos to load for gallery / more that 60 is dumb, separate them into different albums
@@ -70,7 +70,7 @@ SLIDEFADE
       winWidth: 1024, //resets
       touch: false,
       titleText: '',
-      
+
       init: function(){
         var _doc = $(document);
         //check for touch device
@@ -89,7 +89,7 @@ SLIDEFADE
         pg.getDataAttr();
         
         pg.writeHTML();
-        if(pg.albumId !== null
+        if(pg.albumId
           || pg.type == 'instagram'
           || (pg.type == 'local' && !pg.imageData.hasOwnProperty('albums'))){
           //load single Album
@@ -110,7 +110,7 @@ SLIDEFADE
           $(this).append('<span class="pgloading"></span>');
           var galleryTitle = $(this).children('span').html();
           if(pg.type == 'local') {
-						var galleryID = $(this).attr('data-album-index').replace('http://', '').replace('//', '').replace('https://', '');
+            var galleryID = $(this).attr('data-album-index').replace('http://', '').replace('//', '').replace('https://', '');
             pg.parseData(pg.imageData.albums[galleryID],galleryTitle);
           } else {
             var galleryURL = this.href;
@@ -153,9 +153,9 @@ SLIDEFADE
         });
         
         _doc.on("click", ".pgzoomimg",function(){
-					if($(this).attr('id').replace('pgzoomimg', '') < pg.imgTotal - 1) {
-						pg.prevNext('next');
-					}
+          if($(this).attr('id').replace('pgzoomimg', '') < pg.imgTotal - 1) {
+            pg.prevNext('next');
+          }
           return false;
         });
         
@@ -171,12 +171,12 @@ SLIDEFADE
       getDataAttr: function(){
         //Gallery Type *required
         var dataAttr = lmnt.attr('data-type');
-        if(dataAttr) {
+        
+        if(pg.type == null && dataAttr) {
           pg.type = dataAttr;
         }
-        else {
-          alert('You must enter a data type.');
-          return false;
+        else if ( pg.type == null ) {
+          throw('You must enter a data type.');
         }
         
         //Gallery User Id *required if not local
@@ -185,8 +185,7 @@ SLIDEFADE
           pg.userId = dataAttr;
         }
         else if(pg.type != 'local') {
-          alert('You must enter a valid User ID');
-          return false;
+          throw('You must enter a valid User ID');
         }
         
         //Limit on the amount photos per gallery
@@ -237,17 +236,10 @@ SLIDEFADE
             pg.albumTitle = false;
           }
         }
-        else {
-          pg.albumTitle = true;
-          pg.albumId = null;
-        }
         
         dataAttr = lmnt.attr('data-credit');
         if(dataAttr == 'false') {
           pg.credit = false;
-        }
-        else {
-          pg.credit = true;
         }
 
         //Image path
@@ -313,7 +305,7 @@ SLIDEFADE
       /*--------------------------
       
         Parse the album data from
-				the given json string.
+        the given json string.
       
       ----------------------------*/
       parseAlbumData: function(json) {
@@ -354,10 +346,11 @@ SLIDEFADE
             });
           }
           else { //else if albumTotal == 0
-            alert('There are either no results for albums with this user ID or there was an error loading the data. \n' + galleryJSON);
+            throw('There are either no results for albums with this user ID or there was an error loading the data. \n' + galleryJSON);
           }
         break;
         case 'flickr':
+          
           objPath = json.photosets.photoset;
           albumTotal = objPath.length;
               
@@ -370,15 +363,15 @@ SLIDEFADE
               //obj is entry
               if(i < albumTotal){
                 galleryTitle = obj.title._content;
-                galleryImage = 'http://farm' + obj.farm + '.staticflickr.com/' + obj.server + '/' + obj.primary + '_' + obj.secret + '_n.jpg';
-                galleryJSON = 'https://api.flickr.com/services/rest/?&method=flickr.photosets.getPhotos&api_key=' + pg.apiKey + '&photoset_id=' + obj.id + '=&format=json&jsoncallback=?';
+                galleryImage = 'https://farm' + obj.farm + '.staticflickr.com/' + obj.server + '/' + obj.primary + '_' + obj.secret + '_n.jpg';
+                galleryJSON = 'https://api.flickr.com/services/rest/?&method=flickr.photosets.getPhotos&api_key=' + pg.apiKey + '&photoset_id=' + obj.id + '&format=json&jsoncallback=?';
     
                 pg.loadAlbums(galleryTitle,galleryImage,galleryJSON);
               }
             });
           }
           else { //else if albumTotal == 0
-            alert('There are either no results for albums with this user ID or there was an error loading the data. \n' + galleryJSON);
+            throw('There are either no results for albums with this user ID or there was an error loading the data. \n' + galleryJSON);
           }
         break;
         case 'facebook':
@@ -401,7 +394,7 @@ SLIDEFADE
             });
           }
           else {
-            alert('There are either no results for albums with this user ID or there was an error loading the data. \n' + albumURL);
+            throw('There are either no results for albums with this user ID or there was an error loading the data. \n' + albumURL);
           }
           break;
         case 'local':
@@ -425,7 +418,7 @@ SLIDEFADE
             });
           }
           else { //else if albumTotal == 0
-            alert('There are no albums available in the specified JSON.');
+            throw('There are no albums available in the specified JSON.');
           }
           break;
         }
@@ -461,7 +454,7 @@ SLIDEFADE
           break;
     
         default:
-          alert('Please define a gallery type.');
+          throw('Please define a gallery type.');
         }
         
         $.getJSON(albumURL,function(json) {
@@ -508,19 +501,19 @@ SLIDEFADE
             imgHTML = '<img src="' + galleryImage + '" title="' + galleryTitle + '" title="' + galleryTitle + '" class="pgalbumimg">';
           }
           
-					if(pg.type == 'local') {
-						$('#pgalbums').append(
-							'<li class="pgalbumthumb">' +
-								'<a href="#" data-album-index="' + galleryJSON + '" class="pgalbumlink">' + imgHTML + '<span class="pgalbumtitle">' + galleryTitle + '</span><span class="pgplus">+</span></a>' +
-							'</li>'
-						);
-					} else {
-						$('#pgalbums').append(
-							'<li class="pgalbumthumb">' +
-								'<a href="' + galleryJSON + '" class="pgalbumlink">' + imgHTML + '<span class="pgalbumtitle">' + galleryTitle + '</span><span class="pgplus">+</span></a>' +
-							'</li>'
-						);
-					}
+          if(pg.type == 'local') {
+            $('#pgalbums').append(
+              '<li class="pgalbumthumb">' +
+                '<a href="#" data-album-index="' + galleryJSON + '" class="pgalbumlink">' + imgHTML + '<span class="pgalbumtitle">' + galleryTitle + '</span><span class="pgplus">+</span></a>' +
+              '</li>'
+            );
+          } else {
+            $('#pgalbums').append(
+              '<li class="pgalbumthumb">' +
+                '<a href="' + galleryJSON + '" class="pgalbumlink">' + imgHTML + '<span class="pgalbumtitle">' + galleryTitle + '</span><span class="pgplus">+</span></a>' +
+              '</li>'
+            );
+          }
         }
         
         
@@ -544,7 +537,7 @@ SLIDEFADE
           pg.loadGallery(url);
           break;
         case 'flickr':
-          url = 'https://api.flickr.com/services/rest/?&method=flickr.photosets.getPhotos&api_key=' + pg.apiKey + '&photoset_id=' + pg.albumId + '=&format=json&jsoncallback=?';
+          url = 'https://api.flickr.com/services/rest/?&method=flickr.photosets.getPhotos&api_key=' + pg.apiKey + '&photoset_id=' + pg.albumId + '&format=json&jsoncallback=?';
           pg.loadGallery(url);
           break;
         case 'facebook':
@@ -638,7 +631,7 @@ SLIDEFADE
         }
         
         if(pg.imgTotal === 0) {
-          alert('Please check your photo permissions,\nor make sure there are photos in this gallery.');
+          throw('Please check your photo permissions,\nor make sure there are photos in this gallery.');
         }
 
         if(pg.winWidth > 1100) {
